@@ -13,7 +13,7 @@ class Contact {
 };
 
 class AdressBook {
-    //std::map<std::string, Contact*> contact
+    //std::map<std::string, Contact*> contact0
 
 };
 
