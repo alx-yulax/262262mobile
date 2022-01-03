@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <string>
 
 class Number {
     std::string number;
@@ -17,94 +18,114 @@ class Contact {
     std::vector<Number *> numbers;
 public:
     Contact(std::string in_name, std::string in_number) : name(in_name) {
-        numbers.push_back(new Number(in_number));
+        addNumber(in_number);
     }
 
     ~Contact() {
         for (int i = 0; i < numbers.size(); ++i) {
             delete numbers[i];
         }
+        numbers.clear();
     }
 
     std::string getName() {
         return name;
     }
 
+    std::vector<Number *> getNumbers() {
+        return numbers;
+    }
+
     void addNumber(std::string number) {
-        numbers.push_back(new Number(number));
+        if (!findNumber(number)) {
+            numbers.push_back(new Number(number));
+        }
+    }
+
+    bool findNumber(std::string number) {
+        bool found = false;
+        for (int i = 0; i < numbers.size(); ++i) {
+            if (numbers[i]->getNumber() == number) {
+                found = true;
+                break;
+            }
+        }
+        return found;
     }
 };
 
 class AddressBook {
-    std::map<std::string, std::vector<Contact *> > address_book_sort_by_name;
-    std::map<std::string, std::vector<Contact *> > address_book_sort_by_number;
+    std::map<std::string, Contact *> addressBook_sort_name;
 public:
     ~AddressBook() {
-
-        //for (int i = 0; i < contacts.size(); ++i) {
-        //    delete contacts[i];
-        //}
+        for (auto it = addressBook_sort_name.begin(); it != addressBook_sort_name.end(); ++it) {
+            for (int j = 0; j < it->second->getNumbers().size(); ++j) {
+                delete it->second;
+            }
+        }
+        addressBook_sort_name.clear();
     }
 
     void add_contact(std::string name, std::string number) {
-        bool create_contact = true;
-
-        auto search_by_number = address_book_sort_by_number.find(number);
-        if (search_by_number != address_book_sort_by_number.end()) {
-            std::cout << "Number found at " << search_by_number->second.size() << " contacts:" << std::endl;
-            for (int i = 0; i < search_by_number->second.size(); ++i) {
-                std::cout << "#" << i << " " << search_by_number->second[i]->getName() << std::endl;
-            }
-            std::string answer;
-            std::cout << "Create new contact? (y/n): ";
-            std::cin >> answer;
-            if (answer != "y" && answer != "yes") {
-                create_contact = false;
+        bool add = true;
+        if (findContactByNumber(number)) {
+            std::cout << "The number is already in the address book. Add it? (y/n)" << std::endl;
+            add = answer_yes();
+        }
+        if (add) {
+            Contact *foundContact = findContactByName(name);
+            if (foundContact != nullptr) {
+                std::cout << "The contact name is already in the address book. Add it? (y/n)" << std::endl;
+                if (answer_yes()) {
+                    foundContact->addNumber(number);
+                }
+                add = false;
             }
         }
-
-        if (create_contact) {
-            auto search_by_name = address_book_sort_by_name.find(name);
-            if (search_by_name != address_book_sort_by_name.end()) {
-                std::cout << "Name found at " << search_by_name->second.size() << " contacts:" << std::endl;
-                for (int i = 0; i < search_by_name->second.size(); ++i) {
-                    std::cout << "#" << i << " " << search_by_name->second[i]->getName() << std::endl;
-                }
-                std::string answerUpdateContact;
-                std::cout << "Update contact? (y/n): ";
-                std::cin >> answerUpdateContact;
-                if (answerUpdateContact != "y" && answerUpdateContact != "yes") {
-                    int answer;
-                    do {
-                        std::cout << "Input contact id (0): ";
-                        std::cin >> answer;
-                    } while ((answer < 0) || (answer > (search_by_name->second.size() - 1)));
-
-                    search_by_name->second[answer]->addNumber(number);
-
-                    if (search_by_number != address_book_sort_by_number.end()) {
-                        bool address_book_sort_by_number_add = true;
-                        for (int i = 0; i < search_by_number->second.size(); ++i) {
-                            if (search_by_number->second[i] == search_by_name->second[answer]) {
-                                address_book_sort_by_number_add = false;
-                                break;
-                            }
-                        }
-                        if (address_book_sort_by_number_add) {
-                            search_by_number->second.push_back(search_by_name->second[answer]);
-                        }
-                    }
-
-                    create_contact = false;
-                }
-            }
-        }
-        if (create_contact) {
-            Contact *new_contact = new Contact(name, number);
-            address_book_sort_by_name[name].push_back(new_contact);
-            address_book_sort_by_number[number].push_back(new_contact);
+        if (add) {
+            addressBook_sort_name[name] = new Contact(name, number);
         }
     }
+
+    bool answer_yes() {
+        std::string answer;
+        std::cin >> answer;
+        if (answer == "y" || answer == "yes") {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    Contact *findContactByName(std::string name) {
+        Contact *found = nullptr;
+        auto search_by_name = addressBook_sort_name.find(name);
+        if (search_by_name != addressBook_sort_name.end()) {
+            found = search_by_name->second;
+        }
+        return found;
+    }
+
+    Contact *findContactByNumber(std::string number) {
+        Contact *found = nullptr;
+        for (auto it = addressBook_sort_name.begin(); it != addressBook_sort_name.end(); ++it) {
+            if (it->second->findNumber(number)) {
+                found = it->second;
+                break;
+            }
+        }
+        return found;
+    }
+
+    /*void show_addressBook() {
+        for (auto it = addressBook_sort_name.begin(); it != addressBook_sort_name.end(); ++it) {
+            std::cout << it->first << std::endl;
+            for (int j = 0; j < it->second->getNumbers().size(); ++j) {
+                std::cout << it->second->getNumbers()[j]->getNumber() << std::endl;
+            }
+        }
+    }*/
+
 };
 
 class Mobile {
@@ -112,6 +133,7 @@ class Mobile {
 public:
     ~Mobile() {
         delete addressBook;
+        addressBook = nullptr;
     }
 
     Mobile() {
@@ -127,14 +149,63 @@ public:
             std::cin >> number;
         } while (!check_number(number));
         addressBook->add_contact(name, number);
+        //addressBook->show_addressBook();
     }
 
     void call() {
-
+        if (findContact() == nullptr) {
+            std::cout << "No contact found!" << std::endl;
+        } else {
+            std::cout << "CALL! CALL! CALL!" << std::endl;
+        }
     }
 
     void sms() {
+        if (findContact() == nullptr) {
+            std::cout << "No contact found!" << std::endl;
+        } else {
+            std::string text;
+            std::cout << "Input text: ";
+            std::cin.ignore();
+            std::getline(std::cin, text);
+            std::cout << "SMS: " << text << std::endl;
+        }
+    }
 
+    Contact *findContact() {
+        Contact *found = nullptr;
+
+        std::string name_number, name, number;
+        std::cout << "Input name or number: ";
+        std::cin >> name_number;
+        if (check_number(name_number)) {
+            found = addressBook->findContactByNumber(name_number);
+            if (found != nullptr) {
+                number = name_number;
+            }
+        } else {
+            found = addressBook->findContactByName(name_number);
+            if (found != nullptr) {
+                if (found->getNumbers().size() > 1) {
+                    for (int i = 0; i < found->getNumbers().size(); ++i) {
+                        std::cout << "#" << i << " " << found->getNumbers()[i]->getNumber() << std::endl;
+                    }
+
+                    int choice;
+                    do {
+                        std::cout << "Choice number (0-" << found->getNumbers().size() - 1 << "): ";
+                        std::cin >> choice;
+                    } while ((choice < 0) || (choice > (found->getNumbers().size() - 1)));
+                    number = found->getNumbers()[choice]->getNumber();
+                } else {
+                    number = found->getNumbers()[0]->getNumber();
+                }
+            }
+        }
+        if (found != nullptr) {
+            std::cout << "Contact name: " << found->getName() << "  number:" << number << std::endl;
+        }
+        return found;
     }
 
     bool check_number(std::string in_number) {
@@ -164,16 +235,13 @@ int main() {
             iphone->add();
         } else if (command == "call") {
             iphone->call();
-        } else if (command == "show") {
-
         } else if (command == "sms") {
             iphone->sms();
         }
-
     } while (command != "exit");
 
     delete iphone;
+   iphone = nullptr;
 
     return 0;
 }
-
